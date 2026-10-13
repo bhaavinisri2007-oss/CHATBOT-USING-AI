@@ -1,0 +1,147 @@
+# AI Chatbot
+
+A streaming command-line chatbot powered by the Anthropic API (Claude). It remembers the conversation, streams replies as they are written, supports switchable personas, and can save and load chats.
+
+## Features
+
+- **Live streaming:** replies appear word by word instead of all at once
+- **Conversation memory:** the full recent history is sent with every message
+- **Personas:** assistant, tutor, coder and translator, switchable mid-chat
+- **Save and load:** keep a chat as JSON and continue it later
+- **Safe error handling:** a failed or interrupted request never corrupts the conversation, and the chat keeps running
+- **Demo mode:** try the whole interface without an API key
+- **Tested:** unit tests run without network access or an API key
+
+## Requirements
+
+- Python 3.8+
+- An Anthropic API key (create one in the [Anthropic Console](https://console.anthropic.com)). API usage is billed, so check the current pricing.
+
+## Setup
+
+```bash
+git clone https://github.com/<your-username>/ai-chatbot.git
+cd ai-chatbot
+pip install -r requirements.txt
+```
+
+Set your API key as an environment variable.
+
+macOS / Linux:
+
+```bash
+export ANTHROPIC_API_KEY="your-key-here"
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:ANTHROPIC_API_KEY="your-key-here"
+```
+
+**Never commit your API key to GitHub.** This project reads it from the environment, and `.gitignore` already excludes `.env` files and saved chats.
+
+## Usage
+
+```bash
+python chatbot.py
+```
+
+No API key yet? Try the interface in demo mode (it just echoes your message):
+
+```bash
+python chatbot.py --demo
+```
+
+### Options
+
+| Option          | Description                                        | Default                          |
+|-----------------|----------------------------------------------------|----------------------------------|
+| `--persona`     | `assistant`, `tutor`, `coder`, `translator`        | `assistant`                      |
+| `--system`      | Custom system prompt (overrides `--persona`)       | none                             |
+| `--model`       | Model name                                         | `claude-sonnet-5-5`              |
+| `--max-tokens`  | Maximum length of each reply                       | `1024`                           |
+| `--max-turns`   | Recent exchanges sent each turn                    | `20`                             |
+| `--load FILE`   | Load a saved chat at startup                       | none                             |
+| `--demo`        | Run without an API key                             | off                              |
+
+You can also set the model with the `CHATBOT_MODEL` environment variable. If your account uses a different model name, change it there.
+
+Example:
+
+```bash
+python chatbot.py --persona tutor --max-turns 10
+```
+
+### In-chat commands
+
+| Command            | What it does                                  |
+|--------------------|-----------------------------------------------|
+| `/help`            | Show commands                                 |
+| `/reset`           | Clear the conversation                        |
+| `/personas`        | List personas                                 |
+| `/persona <name>`  | Switch persona, keeping the conversation      |
+| `/save [file]`     | Save the chat (default `chat_history.json`)   |
+| `/load [file]`     | Load a saved chat                             |
+| `/quit`            | Exit (or press Ctrl+D)                        |
+
+Press Ctrl+C while a reply is streaming to interrupt it without leaving the chat.
+
+## How it works
+
+The API does not remember previous messages, so the chatbot keeps the history itself and sends it on every request. To keep requests small and cheap, only the most recent `--max-turns` exchanges are sent, always starting on a user message. A new exchange is added to the history only after the reply finishes, so errors never leave the conversation in a broken state.
+
+```
+you type  ->  Chatbot.ask()  ->  API (streaming)  ->  chunks printed live
+                  |                                        |
+            history window  <---- saved after reply completes
+```
+
+## Running tests
+
+```bash
+python -m unittest discover tests
+```
+
+The tests use a fake client, so they need no key and no internet.
+
+## Project structure
+
+```
+ai-chatbot/
+├── README.md
+├── chatbot.py
+├── requirements.txt
+├── .gitignore
+└── tests/
+    └── test_chatbot.py
+```
+
+## Customizing
+
+- **Add a persona:** add an entry to the `PERSONAS` dictionary in `chatbot.py`.
+- **Use it in your own code:**
+
+  ```python
+  import anthropic
+  from chatbot import Chatbot
+
+  bot = Chatbot(anthropic.Anthropic())
+  print(bot.reply("Explain recursion in one sentence."))
+  ```
+
+## Troubleshooting
+
+- **"ANTHROPIC_API_KEY is not set":** set the environment variable in the same terminal you run the chatbot from.
+- **"The 'anthropic' package is missing":** run `pip install -r requirements.txt`.
+- **Model not found or access errors:** pass a model name your account can use with `--model`.
+
+## Ideas for next steps
+
+- A web interface (Flask or Streamlit)
+- Long-term memory with conversation summaries
+- File or document question answering
+
+## License
+
+MIT
